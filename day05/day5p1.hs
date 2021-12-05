@@ -22,9 +22,11 @@ main = interact $ show . score . play . filter (isHV) . map hvd . parsein
                 size :: Int
                 size = extent ls
                 step :: Vent -> Line -> Vent
-                step m (H ((a,b),(_,d))) = foldl updateElem m $ zip (repeat a) [(min b d)..(max b d)]
-                step m (V ((a,b),(c,_))) = foldl updateElem m $ zip [(min a c)..(max a c)] (repeat b)
-                step m (D ((a,b),(c,d))) = foldl updateElem m $ zip [(min a c)..(max a c)] [(min b d)..(max b d)]
+                step m (H ((a,b),(_,d))) = foldl updateElem m $ zip (repeat  a) (range b d)
+                step m (V ((a,b),(c,_))) = foldl updateElem m $ zip (range a c) (repeat  b)
+                step m (D ((a,b),(c,d))) = foldl updateElem m $ zip (range a c) (range b d)
+                range :: Int -> Int -> [Int]
+                range x y = if x < y then [x..y] else reverse [y..x]
                 updateElem :: Vent -> (Int,Int) -> Vent
                 updateElem m k = Map.insert k ((Map.findWithDefault 0 k m) + 1) m
 
