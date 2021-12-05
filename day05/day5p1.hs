@@ -1,37 +1,48 @@
 #!/usr/bin/env stack
 -- stack --resolver lts-18.18 script
-import Debug.Trace (trace)
-type Line = ((Int, Int), (Int, Int)) -- ((x1, y1), (x2, y2))
-type Map = [[Int]]
+{-# Language LambdaCase #-}
+import qualified Data.Map as Map
+type RawLine = ((Int, Int), (Int, Int)) -- ((x1, y1), (x2, y2))
+data Line = H RawLine
+          | V RawLine
+          | D RawLine deriving Show
+type Vent = Map.Map (Int, Int) Int
 
 main :: IO ()
-main = interact $ show . score . play . horv . parsein
+main = interact $ show . score . play . filter (isHV) . map hvd . parsein
     where
-        play :: [Line] -> Map
-        play ls = trace (show ls) $ foldl step newMap ls
+        play :: [Line] -> Vent
+        play ls = foldl step Map.empty ls
             where
                 extent :: [Line] -> Int
-                extent                    [] = 1
-                extent (((a, b), (c, d)):xs) = maximum $ [a,b,c,d,extent xs]
+                extent                        [] = 1
+                extent ((H ((a, b), (c, d))):xs) = maximum $ [a,b,c,d,extent xs]
+                extent ((V ((a, b), (c, d))):xs) = maximum $ [a,b,c,d,extent xs]
+                extent ((D ((a, b), (c, d))):xs) = maximum $ [a,b,c,d,extent xs]
                 size :: Int
                 size = extent ls
-                step :: Map -> Line -> Map
-                step m ((a, b), (c,d)) =
-                    let n = [[if x >= min a c && x <=max a c && y >= min b d && y <= max b d then 1 else 0| x <- [0..size]] | y <- [0..size]]
-                    in zipWith (zipWith (+)) m n
-                newMap :: Map
-                newMap = [[0 | _ <- [0..size]] | _ <- [0..size]]
-        
-        score :: Map -> Int
-        score = sum . map sum . (map (map (\x -> if x > 1 then 1 else 0 )))
+                step :: Vent -> Line -> Vent
+                step m (H ((a,b),(_,d))) = foldl updateElem m $ zip (repeat a) [(min b d)..(max b d)]
+                step m (V ((a,b),(c,_))) = foldl updateElem m $ zip [(min a c)..(max a c)] (repeat b)
+                step m (D ((a,b),(c,d))) = foldl updateElem m $ zip [(min a c)..(max a c)] [(min b d)..(max b d)]
+                updateElem :: Vent -> (Int,Int) -> Vent
+                updateElem m k = Map.insert k ((Map.findWithDefault 0 k m) + 1) m
 
-        horv :: [Line] -> [Line]
-        horv = filter (\l -> h l || v l)
-            where
-                h ((a,_),(c,_)) = a == c
-                v ((_,b),(_,d)) = b == d
+        score :: Vent -> Int
+        score = length . filter (>1) . Map.elems
 
-        parsein :: String -> [Line]
+        isHV :: Line -> Bool
+        isHV (H _) = True
+        isHV (V _) = True
+        isHV _____ = False
+
+        hvd :: RawLine -> Line
+        hvd = \case
+            l@((a, _), (c, _)) | a == c -> H l
+            l@((_, b), (_, d)) | b == d -> V l
+            l                           -> D l
+
+        parsein :: String -> [RawLine]
         parsein = map (\x -> ((x!!0, x!!1), (x!!2, x!!3))) . map (map read . words) . lines . map repl
                   where
                     repl ',' = ' '
