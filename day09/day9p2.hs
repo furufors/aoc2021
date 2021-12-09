@@ -31,7 +31,7 @@ main = interact $ show . foldl1 (*) . take 3 . reverse . sort . findBasins . pad
 -- Algorithm:
 -- Sweep all points.
 -- For each point:
---   If the point is not in the blocklist:
+--   If the point is in the blocklist abort else
 --   run a search starting at that point to find basin size
 --   add each point swept to the block-list
 --   in the end sum up size
