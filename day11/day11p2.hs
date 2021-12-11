@@ -15,7 +15,7 @@ instance Ord a => Ord (DumboP a) where
     (Flashed) `compare` (Charging _) = LT
     (Charging _) `compare` (Flashed) = GT
 
-main = interact $ show . fst . (\d -> (iterate step d)!!100) . parsein
+main = interact $ show . length . (\d -> takeWhile ((\(s,ds) -> s /= dumboCount ds))(iterate step d)) . parsein
     where
         step :: (Int , Dumbos) -> (Int, Dumbos)
         step (i, ds) = fmap resetFlashed . countFlashes i . flash . increase $ ds
@@ -30,6 +30,8 @@ main = interact $ show . fst . (\d -> (iterate step d)!!100) . parsein
         xrange ds = [1..(length (head ds) - 2)]
         yrange :: Dumbos -> [Int]
         yrange ds = [1..(length ds - 2)]
+        dumboCount :: Dumbos -> Int
+        dumboCount ds = (length $ xrange ds) * (length $ yrange ds)
 
         flash :: Dumbos -> Dumbos
         flash ds = if inert ds then ds
@@ -61,7 +63,7 @@ main = interact $ show . fst . (\d -> (iterate step d)!!100) . parsein
 
         countFlashes :: Int -> Dumbos -> (Int, Dumbos)
         countFlashes old ds = let hasFlashed = [()| x <- xrange ds, y <- yrange ds, ds!!y!!x == Flashed]
-                              in (old + (length hasFlashed), ds)
+                              in (length hasFlashed, ds)
 
         resetFlashed :: Dumbos -> Dumbos
         resetFlashed ds = pad [[ update x y | x <- xrange ds] | y <- yrange ds]
