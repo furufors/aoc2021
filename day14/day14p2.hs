@@ -34,6 +34,7 @@ main = interact $ show . score . researchPolymer 40 . parsein
 
         -- Right measure is to count first and second as separate, then the higher of them is the correct result.
         -- This deals with the letters used either at the start of end of the string.
+        -- Probably doesn't handle Polymer seeds with the same first and last letter...
         count :: M.Map Char (Int, Int) -> ((Char,Char), (Int,Int,Bool)) -> M.Map Char (Int, Int)
         count m ((a,b), (i,_,_)) = let f = \(f1,s1) (f2,s2) -> (f1+f2,s1+s2)
                                    in M.insertWith f b (0,i) . M.insertWith f a (i,0) $ m
