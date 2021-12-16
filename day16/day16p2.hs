@@ -6,14 +6,20 @@ import Data.List.Split (chunksOf)
 type BinString = String
 type Version = Int
 type Value = Int
-data Package = Literal Version Value | Operator Version [Package] deriving Show
+data Op = Sum | Product | Minimum | Maximum | GreaterThan | LessThan | EqualTo deriving Show
+data Package = Literal Version Value | Operator Op Version [Package] deriving Show
 
-main = interact $ show .  map (countVersionNumbers . parsePackages . hexstringToB4) . lines
+main = interact $ show .  map (map evaluate . parsePackages . hexstringToB4) . lines
 
-countVersionNumbers :: [Package] -> Int
-countVersionNumbers [                  ] = 0
-countVersionNumbers ((Literal  v __):bs) = v + countVersionNumbers bs
-countVersionNumbers ((Operator v as):bs) = v + countVersionNumbers as + countVersionNumbers bs
+evaluate :: Package -> Int
+evaluate (Literal _ v) = v
+evaluate (Operator Sum _ ps )= sum . map evaluate $ ps
+evaluate (Operator Product _ ps) = product . map evaluate $ ps
+evaluate (Operator Minimum _ ps) = minimum . map evaluate $ ps
+evaluate (Operator Maximum _ ps) = maximum . map evaluate $ ps
+evaluate (Operator GreaterThan _ ps) = let (a:b:_) = map evaluate ps in if a > b then 1 else 0
+evaluate (Operator LessThan _ ps) = let (a:b:_) = map evaluate ps in if a < b then 1 else 0 
+evaluate (Operator EqualTo _ ps) = let (a:b:_) = map evaluate ps in if a == b then 1 else 0
 
 parsePackages :: BinString -> [Package]
 parsePackages [] = []
@@ -24,8 +30,15 @@ parsePackages s  =
              ver = binToInt . take 3 $ s
              rest = drop 6 s
          in case typ of
+            0         -> parseOperator Sum ver rest
+            1         -> parseOperator Product ver rest
+            2         -> parseOperator Minimum ver rest
+            3         -> parseOperator Maximum ver rest
             4         -> parseLiteral ver rest
-            otherwise -> parseOperator ver rest
+            5         -> parseOperator GreaterThan ver rest
+            6         -> parseOperator LessThan ver rest
+            7         -> parseOperator EqualTo ver rest
+            otherwise -> error "Unkown Operator package type"
 
 parseLiteral :: Version -> BinString -> [Package]
 parseLiteral ver s = let (val,rest) = parseLiteral' s in (Literal ver (binToInt val)):parsePackages rest
@@ -34,17 +47,17 @@ parseLiteral' :: BinString -> (BinString, BinString)
 parseLiteral' s | length s < 5 = error "BinString ended while parsing Literal"
 parseLiteral' (a:b:c:d:e:bs) = if a == '1' then (\(v,bs') -> ([b,c,d,e] ++ v, bs')) (parseLiteral' bs) else ([b,c,d,e], bs)
 
-parseOperator :: Version -> BinString -> [Package]
-parseOperator ver []     = error "BinString ended while parsing Operator"
-parseOperator ver (s:bs) = 
+parseOperator :: Op -> Version -> BinString -> [Package]
+parseOperator op ver []     = error "BinString ended while parsing Operator"
+parseOperator op ver (s:bs) = 
     if s == '0'
     then let bits = binToInt . take 15 $ bs
              subPacketData = take bits . drop 15 $ bs 
              rest = drop (15 + bits) $ bs
-         in  (Operator ver (parsePackages subPacketData)):(parsePackages rest)
+         in  (Operator op ver (parsePackages subPacketData)):(parsePackages rest)
     else let packageCount = binToInt . take 11 $ bs
              remainingPackages = parsePackages . drop 11 $ bs
-         in  (Operator ver (take packageCount remainingPackages)):(drop packageCount remainingPackages)
+         in  (Operator op ver (take packageCount remainingPackages)):(drop packageCount remainingPackages)
 
 hexstringToB4 :: String -> BinString
 hexstringToB4 = concat . map toB4
