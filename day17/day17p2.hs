@@ -10,7 +10,7 @@ targetRX = 232
 targetUY = -69
 targetLY = -124
 
-main = putStrLn $ show . findMaxY . filter passesTarget . 
+main = putStrLn $ show . length . filter passesTarget . 
        map (takeWhile validState . calculateTrajectory) $ possibleStartConditions
     where
         possibleStartConditions :: [State]
