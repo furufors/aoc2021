@@ -27,8 +27,10 @@ instance Show Snailfish where
     show (S i v) = show v
     show (P (a,b)) = "[" ++ show a ++ "," ++ show b ++ "]"
 
-main = interact $ show . magnitude . sumSnailfish . map (reduceSnailfish . snd . parseSnailfish 0) . lines
+main = interact $ show . maximum . combinations . map (reduceSnailfish . snd . parseSnailfish 0) . lines
     where
+        combinations :: [Snailfish] -> [Int]
+        combinations ss = let is = [0..(length ss - 1)] in [magnitude (addSnailfish (ss!!a) (ss!!b)) | a <- is, b <- is, a /= b]
         parseSnailfish :: Int -> String -> (Int, Snailfish)
         parseSnailfish n s =
             if head s == '['
