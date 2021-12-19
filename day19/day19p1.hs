@@ -55,10 +55,10 @@ main = interact $ show . S.size . (\x -> trace (show x) $ x) . reconstruct . par
         
         axisPermutations :: [(Xyz -> Xyz)]
         axisPermutations =  [ \(x, y, z) -> ( x,  y,  z)
-                            , \(x, y, z) -> (-x, -y,  z)
+                            , \(x, y, z) -> (-x,  y, -z)
                             , \(x, y, z) -> ( y, -x,  z)
                             , \(x, y, z) -> (-y,  x,  z)
-                            , \(x, y, z) -> ( z,  x,  y)
+                            , \(x, y, z) -> ( z,  y, -x)
                             , \(x, y, z) -> (-z,  y,  x)
                             ]
 
