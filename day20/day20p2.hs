@@ -1,7 +1,6 @@
 #!/usr/bin/env stack
 -- stack --resolver lts-18.18 script
 {-# Language LambdaCase #-}
-import Test.HUnit
 import Data.List (intercalate)
 import Debug.Trace (trace)
 data Pixel = Light | Dark deriving Eq
@@ -12,10 +11,7 @@ instance Show Pixel where
     show Light = "."
     show Dark  = "#"
 
-main = do
-    runTestTT $ TestList [test1,test2,test3,test4,test5,test6,test7]
-    interact $ show . (\i -> trace (paint i) $ darkCount i) . (\(alg,img) -> enhance 50 alg img) . parsein . lines
-    return ()
+main = interact $ show . (\i -> trace (paint i) $ darkCount i) . (\(alg,img) -> enhance 50 alg img) . parsein . lines
     where
         parsein :: [String] -> (ImEnAlg, Image)
         parsein [    ] = error "parsein: Empty input" 
@@ -59,13 +55,3 @@ main = do
 
         paint :: Image -> String
         paint = intercalate "\n" . map (concat . map show)
-
-        test1 = TestCase (assertEqual "sampleToIndex . == 0" 0 (sampleToIndex [Light]))
-        test2 = TestCase (assertEqual "sampleToIndex # == 0" 1 (sampleToIndex [Dark]))
-        test3 = TestCase (assertEqual "sampleToIndex #. == 2" 2 (sampleToIndex [Dark,Light]))
-        test4 = TestCase (assertEqual "sampleToIndex #..#. == 18" 18 (sampleToIndex [Dark,Light,Light,Dark,Light]))
-        test5 = TestCase (assertEqual "toPixels #..#." [Dark,Light,Light,Dark,Light] (toPixels "#..#."))
-        test6 = TestCase (assertEqual "resolve ....#. #.. (i=4)" Dark (resolve (toPixels "....#.") (toPixels "#..")))
-        test7 = TestCase (assertEqual "Pad #"
-            [[Light,Light,Light], [Light, Dark, Light], [Light,Light,Light]]
-            (pad Light [[Dark]]))
