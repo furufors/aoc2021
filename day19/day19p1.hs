@@ -31,7 +31,7 @@ main = interact $ show . S.size . (\x -> trace (show x) $ x) . reconstruct . par
                         xrange = toMinMax . S.map xaccess $ e
                         yrange = toMinMax . S.map yaccess $ e
                         zrange = toMinMax . S.map zaccess $ e
-                        match access perm = S.size (S.intersection (S.map access e) (S.fromList perm)) >= 12
+                        match access perm = S.size (S.intersection (S.map access e) (S.fromList perm)) >= 11
                         xresults = [(f, xoffset) | f <- rotations
                                                  , xoffset <- xrange
                                                  , match xaccess (map ((+xoffset) . xaccess . f) s)]
