@@ -1,30 +1,58 @@
 #!/usr/bin/env stack
 -- stack --resolver lts-18.18 script
+{-# Language BangPatterns #-}
 import qualified Data.Map as M
+import Data.List (sort)
 import Data.Either
 import Data.List.Split (chunksOf)
-type CharInt = Either Char Int
+type CharInt = Either Char Integer
 data Instruction = Inp Char | Add Char CharInt | Mul Char CharInt | Div Char CharInt | Mod Char CharInt | Eql Char CharInt deriving Show
 type Prog = [Instruction]
---type Registers = M.Map Char Int
-data Registers = Reg Int Int Int Int
+data Registers = Reg Integer Integer Integer Integer
+type Prog2 = [Inst2]
+data Inst2 = Choice Integer | Given Integer
 
 main :: IO ()
-main = interact $ show . solve [(0, [])] . chunksOf 18 . map parsein . lines
+main = putStrLn . show . solve2 $ task
     where
 
-    solve :: [(Int, [Int])] -> [Prog] -> [Int]
-    solve sls [    ] = map (sum . zipWith (\a b -> b * 10^a) [0..] . reverse) $ map snd $ filter ((==0) . fst) sls
-    solve sls (p:ps) = solve [(z, n:(snd sl)) | n <- [1..9], sl <- sls, let z = validMN (Reg 0 0 0 (fst sl)) p [n]] ps
+    -- Choice n: zr = 26 * z0 + w + n
+    -- Given  n: zr = (z0 div 26) when z0 mod 26 - n == w
+    task = [ Choice  6
+           , Choice  6
+           , Choice  3
+           , Given  11
+           , Choice  9
+           , Given   1
+           , Choice 13
+           , Choice  6
+           , Given   0
+           , Choice 10
+           , Given   5
+           , Given  16
+           , Given   7
+           , Given  11
+           ]
+
+    solve :: [(Integer, [Integer])] -> [Prog] -> [Integer]
+    solve !sls [    ] = map (sum . zipWith (\a b -> b * 10^a) [0..] . reverse) $ map snd $ filter ((==0) . fst) sls
+    solve !sls (p:ps) = solve [(z, n:(snd sl)) | n <- [1..9], sl <- sls, let z = validMN (Reg 0 0 0 (fst sl)) p [n]] ps
+
+    solve2 :: Prog2 -> Integer
+    solve2 p = last . sort . map (sum . zipWith (\a b -> 10^a * b) [13,12..0] . snd) . filter ((==0) . fst) $ step p [(0,[])]
+
+    step :: Prog2 -> [(Integer, [Integer])] -> [(Integer, [Integer])]
+    step [             ] gs = gs
+    step ((Choice n):ps) gs = step ps [(26*z0 + n + w, ws ++ [w]) | (z0, ws) <- gs, w <- [1..9]]
+    step ((Given  n):ps) gs = step ps [(z0 `div` 26, ws ++ [w]) | (z0, ws) <- gs, w <- [1..9], (z0 `mod` 26) - n - w == 0]
 
     startReg :: Registers
     startReg = Reg 0 0 0 0
-    --startReg = M.insert 'w' 0 $ M.insert 'x' 0 $ M.insert 'y' 0 $ M.insert 'z' 0 $ M.empty
 
-    numbers :: [[Int]]
-    numbers = map (map read . chunksOf 1 . show) . filter (not . elem '0' . show) $ [11111111111111..]-- [99999999999999,99999999999998..0]
+    numbers :: [[Integer]]
+    numbers = map (map read . chunksOf 1 . show) . filter (not . elem '0' . show) $ [99999999999999,99999999999998..0]
 
-    validMN :: Registers -> Prog -> [Int] -> Int
+    validMN :: Registers -> Prog -> [Integer] -> Integer
     validMN (Reg _ _ _ z) [] _ = z
     validMN reg ((Inp c):ops) (i:is) = let reg' = ins c i reg
                                        in validMN reg' ops is
@@ -49,24 +77,21 @@ main = interact $ show . solve [(0, [])] . chunksOf 18 . map parsein . lines
                                          reg' = ins a (if a' == b' then 1 else 0) reg
                                      in validMN reg' ops is
 
-    fr :: CharInt -> Int
+    fr :: CharInt -> Integer
     fr = fromRight (error "Missing right value") 
 
     fl :: CharInt -> Char
     fl = fromLeft (error "Missing left value") 
 
-    lu :: Registers -> Char -> Int
+    lu :: Registers -> Char -> Integer
     lu (Reg w x y z) c = case c of
         'w' -> w
         'x' -> x
         'y' -> y
         'z' -> z
         otherwise -> error "lookup none-existing register"
-    --lu reg c = case M.lookup c reg of
-    --             Nothing -> error "Empty reg"
-    --             Just i -> i
 
-    ins :: Char -> Int -> Registers -> Registers
+    ins :: Char -> Integer -> Registers -> Registers
     ins c i (Reg w x y z) = case c of
         'w' -> Reg i x y z
         'x' -> Reg w i y z

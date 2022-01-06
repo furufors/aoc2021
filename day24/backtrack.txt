@@ -1,23 +1,29 @@
 inp w
-mul x 0
-add x z
-mod x 26
-div z 1
-add x 12
-eql x w
-eql x 0
-mul y 0
-add y 25
-mul y x
-add y 1
-mul z y
-mul y 0
-add y w
-add y 6
-mul y x
-add z y
+mul x 0  w = inp, x = 0
+add x z  x = z0
+mod x 26 x = z0 `mod` 26
+div z 1  z = z0
+add x 12 x = z0 `mod` 26 + 12
+eql x w  x = if (z0 `mod` 26 + 12 == inp)
+eql x 0  x = !if (z0 `mod` 26 + 12 == inp)
+mul y 0  y = 0
+add y 25 y = 25
+mul y x  y = 25 * x
+add y 1  y = 25 * x + 1
+mul z y  z1 = z0 * (25 * x + 1)
+mul y 0  y = 0
+add y w  y = w
+add y 6  y = w + 6
+mul y x  y = (w + 6) * x
+add z y  z = z0 * (25 * !if (z0 `mod` 26 + 12 == inp) + 1) + (w + 6) * !if (z0 `mod` 26 + 12 == inp)
+
+=> if (inp == z0 `mod` 26 + 12)
+   then zr = z0
+   else zr = 26 * z0 + w + 6 <- since 12 > [1..9] this is only valid case
+   Choice 6
+
 inp w
-mul x 0
+mul x 0  
 add x z
 mod x 26
 div z 1
@@ -34,6 +40,12 @@ add y w
 add y 6
 mul y x
 add z y
+
+=> if (inp == z0 `mod` 26 + 10)
+   then zr = z0
+   else zr = 26 * z0 + w + 6
+   Choice 6
+
 inp w
 mul x 0
 add x z
@@ -52,24 +64,36 @@ add y w
 add y 3
 mul y x
 add z y
+
+=> if (inp == z0 `mod` 26 + 13)
+   then zr = z0
+   else zr = 26 * z0 + w + 3
+   Choice 3
+
 inp w
-mul x 0
-add x z
-mod x 26
-div z 26
-add x -11
-eql x w
-eql x 0
-mul y 0
-add y 25
-mul y x
-add y 1
-mul z y
-mul y 0
-add y w
-add y 11
-mul y x
-add z y
+mul x 0   x0 = 0
+add x z   x1 = z0
+mod x 26  x2 = z0 mod 26
+div z 26  z1 = z0 div 26
+add x -11 x3 = z0 mod 26 - 11
+eql x w   x4 = if z0 mod 26 - 11 == inp
+eql x 0   x5 = !x4
+mul y 0   y1 = 0
+add y 25  y2 = 25
+mul y x   y3 = 25 * x5
+add y 1   y4 = 25 * x5 + 1
+mul z y   z2 = z0 div 26 * (25 * x5 + 1)
+mul y 0   y6 = 0
+add y w   y7 = inp
+add y 11  y8 = inp + 11
+mul y x   y9 = (inp + 11) * x5
+add z y   z3 = z0 div 26 * (25 * x5 + 1) + (inp + 11) * x5
+
+=> if z0 mod 26 - 11 == inp
+   then zr = (z0 div 26) <- To keep zr reasonable we must decrease |zr|
+   else zr = (z0 div 26) * 26 + inp + 11
+   Given 11
+
 inp w
 mul x 0
 add x z
@@ -88,6 +112,8 @@ add y w
 add y 9
 mul y x
 add z y
+	Choice 9
+
 inp w
 mul x 0
 add x z
@@ -106,6 +132,7 @@ add y w
 add y 3
 mul y x
 add z y
+	Given 1
 inp w
 mul x 0
 add x z
@@ -124,6 +151,7 @@ add y w
 add y 13
 mul y x
 add z y
+	Choice 13
 inp w
 mul x 0
 add x z
@@ -142,6 +170,7 @@ add y w
 add y 6
 mul y x
 add z y
+	Choice 6
 inp w
 mul x 0
 add x z
@@ -160,6 +189,7 @@ add y w
 add y 14
 mul y x
 add z y
+	Given 0
 inp w
 mul x 0
 add x z
@@ -178,6 +208,7 @@ add y w
 add y 10
 mul y x
 add z y
+	Choice 10
 inp w
 mul x 0
 add x z
@@ -196,6 +227,7 @@ add y w
 add y 12
 mul y x
 add z y
+	Given 5
 inp w
 mul x 0
 add x z
@@ -214,6 +246,7 @@ add y w
 add y 10
 mul y x
 add z y
+	Given 16
 inp w
 mul x 0
 add x z
@@ -232,6 +265,7 @@ add y w
 add y 11
 mul y x
 add z y
+	Given 7
 inp w
 mul x 0
 add x z
@@ -250,3 +284,4 @@ add y w
 add y 15 --
 mul y x -- x = n * y = -n * z
 add z y -- z = -y
+	Given 11
