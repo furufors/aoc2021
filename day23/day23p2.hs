@@ -1,7 +1,7 @@
 #!/usr/bin/env stack
 -- stack --resolver lts-18.18 script
 import Data.Maybe
-import Data.List (reverse)
+import Data.List (reverse, sortBy)
 import Debug.Trace (trace)
 import Control.Parallel (par)
 import qualified Data.Map as M
@@ -46,14 +46,14 @@ type History = M.Map Hallway Int
 -- Algorithm, take all valid next steps.
 -- Remove Hallway states that has already been visited and is costlier
 -- If a duplicate Hallway state occurs, update memory with the one with lowest score
-main = putStrLn . show . minimum . map snd . filter (\(h,_) -> isDone h) . M.toList $ game M.empty (0, startState)
+main = putStrLn . show . minimum . map snd . filter (\(h,_) -> isDone h) . M.toList $ game M.empty [(0, startState)]
 
-game :: History -> State -> History
-game hist state = let possibleNextSteps = nextSteps state
-                      (cheaperNextSteps, cheaperHist) = removeCostlier hist possibleNextSteps
-                  in if cheaperNextSteps == []
-                     then cheaperHist
-                     else foldl game cheaperHist cheaperNextSteps
+game :: History -> [State] -> History
+game hist [    ] = hist
+game hist states = let pq = sortBy (\a b -> compare (fst a) (fst b)) states -- exclude highest first
+                       possibleNextSteps = nextSteps . head $ pq
+                       (cheaperNextSteps, cheaperHist) = removeCostlier hist possibleNextSteps
+                   in game cheaperHist (cheaperNextSteps ++ (tail pq))
 
 removeCostlier :: History -> [State] -> ([State], History)
 removeCostlier h [    ] = ([], h)
@@ -70,8 +70,10 @@ nextSteps s = if isDone (snd s)
                        ex4 = movea2 s ++ moveb2 s ++ movec2 s ++ moved2 s
                        ex5 = movea3 s ++ moveb3 s ++ movec3 s ++ moved3 s
                        ex6 = movea4 s ++ moveb4 s ++ movec4 s ++ moved4 s
-                       action = if ex1 /= [] then ex1 else ex2 ++ ex3 ++ ex4 ++ ex5 ++ ex6 -- Prioritize moveFromHallway
-                    in ex1 `par` (ex2 `par` (ex3 `par` (ex4 `par` (ex5 `par` (ex6 `par` action)))))
+                       --action = if ex1 /= []
+                       --         then ex1
+                       --         else ex2 `par` (ex3 `par` (ex4 `par` (ex5 `par` (ex6 `par` ex2 ++ ex3 ++ ex4 ++ ex5 ++ ex6)))) -- Prioritize moveFromHallway
+                    in ex1 `par` (ex2 `par` (ex3 `par` (ex4 `par` (ex5 `par` (ex6 `par` ex1 ++ ex2 ++ ex3 ++ ex4 ++ ex5 ++ ex6)))))
 
 
 -- Double (e.g.) H2 H2 to add correct distance when going from A1 -> H2
@@ -106,14 +108,14 @@ movea2 (c, h) = if all (\a -> a h == A) [a2,a3,a4] then [] else moveAlongPath (c
 moveb2 (c, h) = if all (\a -> a h == B) [b2,b3,b4] then [] else moveAlongPath (c, h) [B2,B1]
 movec2 (c, h) = if all (\a -> a h == C) [c2,c3,c4] then [] else moveAlongPath (c, h) [C2,C1]
 moved2 (c, h) = if all (\a -> a h == D) [d2,d3,d4] then [] else moveAlongPath (c, h) [D2,D1]
-movea3 (c, h) = if all (\a -> a h == A) [a3,a4] then [] else moveAlongPath (c, h) [A3,A2]
-moveb3 (c, h) = if all (\a -> a h == B) [b3,b4] then [] else moveAlongPath (c, h) [B3,B2]
-movec3 (c, h) = if all (\a -> a h == C) [c3,c4] then [] else moveAlongPath (c, h) [C3,C2]
-moved3 (c, h) = if all (\a -> a h == D) [d3,d4] then [] else moveAlongPath (c, h) [D3,D2]
-movea4 (c, h) = if all (\a -> a h == A) [a4] then [] else moveAlongPath (c, h) [A4,A3]
-moveb4 (c, h) = if all (\a -> a h == B) [b4] then [] else moveAlongPath (c, h) [B4,B3]
-movec4 (c, h) = if all (\a -> a h == C) [c4] then [] else moveAlongPath (c, h) [C4,C3]
-moved4 (c, h) = if all (\a -> a h == D) [d4] then [] else moveAlongPath (c, h) [D4,D3]
+movea3 (c, h) = if all (\a -> a h == A) [a3,a4] then [] else if all (\a -> a h == E) [a1,a2] then moveAlongPath (c, h) [A3,A2,A1] else []
+moveb3 (c, h) = if all (\a -> a h == B) [b3,b4] then [] else if all (\a -> a h == E) [b1,b2] then moveAlongPath (c, h) [B3,B2,B1] else []
+movec3 (c, h) = if all (\a -> a h == C) [c3,c4] then [] else if all (\a -> a h == E) [c1,c2] then moveAlongPath (c, h) [C3,C2,C1] else []
+moved3 (c, h) = if all (\a -> a h == D) [d3,d4] then [] else if all (\a -> a h == E) [d1,d2] then moveAlongPath (c, h) [D3,D2,D1] else []
+movea4 (c, h) = if all (\a -> a h == A) [a4] then [] else if all (\a -> a h == E) [a1,a2,a3] then moveAlongPath (c, h) [A4,A3,A2,A1] else []
+moveb4 (c, h) = if all (\a -> a h == B) [b4] then [] else if all (\a -> a h == E) [b1,b2,b3] then moveAlongPath (c, h) [B4,B3,B2,B1] else []
+movec4 (c, h) = if all (\a -> a h == C) [c4] then [] else if all (\a -> a h == E) [c1,c2,c3] then moveAlongPath (c, h) [C4,C3,C2,C1] else []
+moved4 (c, h) = if all (\a -> a h == D) [d4] then [] else if all (\a -> a h == E) [d1,d2,d3] then moveAlongPath (c, h) [D4,D3,D2,D1] else []
 
 moveAlongPath :: State -> [Position] -> [State]
 moveAlongPath (c, h) ps = let s = head ps
