@@ -249,4 +249,4 @@ mul y 0
 add y w
 add y 15
 mul y x
-add z y
+add z y -- z = -y
