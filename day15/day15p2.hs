@@ -9,15 +9,22 @@ main = interact $ show . minPathSum . parsein
         minPathSum :: [[Int]] -> Int
         minPathSum s = case minPath step (m,n) (0, (0,0)) of Nothing -> 0; Just x -> fst x
             where
-                m = (length . head $ s) - 1
-                n = (length s) - 1
+                modx = length . head $ s
+                mody = length s
+                m = 5 * modx - 1
+                n = 5 * mody - 1
                 step :: Node -> [Node]
                 step (c,(x,y)) = top ++ left ++ right ++ bottom
                     where
-                        top    = if y > 0 then [(c + s!!(y-1)!!(x), (x, y-1))] else []
-                        left   = if x > 0 then [(c + s!!(y)!!(x-1), (x-1, y))] else []
-                        right  = if x < m then [(c + s!!(y)!!(x+1), (x+1, y))] else []
-                        bottom = if y < n then [(c + s!!(y+1)!!(x), (x, y+1))] else []
+                        top    = if y > 0 then [(c + getCost x (y-1), (x, y-1))] else []
+                        left   = if x > 0 then [(c + getCost (x-1) y, (x-1, y))] else []
+                        right  = if x < m then [(c + getCost (x+1) y, (x+1, y))] else []
+                        bottom = if y < n then [(c + getCost x (y+1), (x, y+1))] else []
+                        getCost a b = let fx = a `div` modx
+                                          fy = b `div` mody
+                                          px = a `mod` (modx)
+                                          py = b `mod` (mody)
+                                      in cycle [1..9]!!(fx + fy + s!!py!!px - 1)
 
         minPath :: (Ord cost , Ord node) => ((cost , node) -> [(cost , node)]) -> node -> (cost , node) -> Maybe (cost , node)
         minPath step goal start = search mempty (Set.singleton start)
