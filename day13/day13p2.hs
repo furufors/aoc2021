@@ -4,7 +4,7 @@ import Data.List (isPrefixOf)
 type Sheet = [[Bool]]
 data Instruction = FoldAtX Int | FoldAtY Int
 
-main = interact $ show . (sum . map (\x -> if x then 1 else 0) . concat) . (\(i,s) -> foldl vik s (take 1 i)) . parsein
+main = interact $ toStr . (\(i,s) -> foldl vik s i) . parsein
     where
         vik :: Sheet -> Instruction -> Sheet
         vik s (FoldAtX x) = map (\r -> zipWith (||) (take x r) (take x . reverse $ take (2 * x + 1) (r ++ repeat False))) s
@@ -35,3 +35,7 @@ main = interact $ show . (sum . map (\x -> if x then 1 else 0) . concat) . (\(i,
 
         replace2D :: (a -> a) -> (Int, Int) -> [[a]] -> [[a]]
         replace2D f (x,y) = replace (replace f x) y
+
+        toStr :: Sheet -> String
+        toStr = concat . map ((++"\n") . map (\x -> if x then '#' else '.'))
+        
