@@ -14,7 +14,7 @@ instance Show Pixel where
 
 main = do
     runTestTT $ TestList [test1,test2,test3,test4,test5,test6,test7]
-    interact $ show . (\i -> trace (paint i) $ darkCount i) . (\(alg,img) -> enhance 2 alg img) . parsein . lines
+    interact $ show . (\i -> trace (paint i) $ darkCount i) . (\(alg,img) -> enhance 50 alg img) . parsein . lines
     return ()
     where
         parsein :: [String] -> (ImEnAlg, Image)
@@ -36,7 +36,7 @@ main = do
             let width  = length (head img)
                 height = length img
                 next = [[resolve alg (sample img x y) | x <- [1..(width-2)]] | y <- [1..(height-2)]]
-            in enhance (n-1) alg $ padN 3 (next!!0!!0) next 
+            in enhance (n-1) alg $ padN 2 (next!!0!!0) next 
 
         sample :: Image -> Int -> Int -> [Pixel]
         sample img x y = [img!!y'!!x' | y' <- [y-1, y, y+1], x' <- [x-1, x, x+1]]
