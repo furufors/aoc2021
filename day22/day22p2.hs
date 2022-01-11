@@ -2,51 +2,36 @@
 -- stack --resolver lts-18.18 script
 {-# Language BangPatterns #-}
 import qualified Data.Set as S
-import Data.List (sort, nub)
+import Data.List (sort)
 import Data.List.Split
-import Debug.Trace (trace)
 import Test.HUnit
-data State = On | Off deriving Eq
-type Cube = ((Int, Int), (Int, Int), (Int, Int))
+data State = On | Off deriving (Eq, Show)
+type Cube = ((Integer, Integer), (Integer, Integer), (Integer, Integer))
 type Rule = (Main.State, Cube)
 type Reactor = S.Set Cube
 
 main = do
-    runTestTT $ TestList [test1,test2,test3,test4,test5,test6,test7,test8,test9,test10,test11,test12,test13,test14]
+    runTestTT $ TestList [test1,test2,test3,test4,test5,test6,test7,test8,test9,test10,test11,test12,test13,test14,test15,test16,test17]
     interact $ show . main'
     return ()
     where
-        main' = countOn . containedWithin . foldl (updateReactor) (S.singleton ((0,0), (0,0), (0,0))) . map parsein . lines
+        main' = countOn . foldl (updateReactor) (S.singleton ((0,0), (0,0), (0,0))) . map parsein . lines
 -- Algorithm:
--- For each existing Cube, see if the new rule updates an volume which is alredy occupied.
+-- For each existing Cube, see if the new rule updates a volume which is alredy occupied.
 -- Modify the already occupied Cubes to new sections of cubes which are not overlapping.
         updateReactor :: Reactor -> Rule -> Reactor 
         updateReactor reactor rule =
-            let (bool, reactor') = foldl (updateCubes rule) (False, reactor) (S.toList reactor)
-            in if not bool && fst rule == On then S.insert (snd rule) reactor' else reactor'
+            let reactor' = foldl (updateCubes rule)  (S.singleton ((0,0), (0,0), (0,0))) (S.toList reactor)
+            in if fst rule == On then S.insert (snd rule) reactor' else reactor'
 
-        updateCubes :: Rule -> (Bool, Reactor) -> Cube -> (Bool, Reactor)
-        updateCubes (s, cr@(xs, ys, zs)) (bool, reactor) ct =
-            if (s == On && cr `contains` ct)
-            then (bool, S.delete ct reactor)
-            else if (s == Off && cr `contains` ct)
-                 then (bool, S.delete ct reactor)
-                 else if overlap cr ct
-                      then case s of
-                             Off -> let newCubes = splitAndRemoveCubes cr ct
-                                    in (True, S.union newCubes $ S.delete ct $ S.delete cr reactor)
-                             On  -> let newCubes = splitAndAddCubes cr ct
-                                    in (True, S.union newCubes $ S.delete ct $ S.delete cr reactor)
-                      else (bool, reactor)
-
-        containedWithin :: Reactor -> Reactor
-        containedWithin r = foldl removeContained r (S.toList r)
-
-        removeContained :: Reactor -> Cube -> Reactor
-        removeContained r c = foldl (containedCube c) r (S.toList r)
-
-        containedCube :: Cube -> Reactor -> Cube -> Reactor
-        containedCube c r c' = if c `contains` c'  then S.delete c' r else r
+        updateCubes :: Rule -> Reactor -> Cube -> Reactor
+        updateCubes (s, cr@(xs, ys, zs)) reactor ct =
+            if (cr `contains` ct)
+            then reactor
+            else if overlap cr ct
+                 then let newCubes = removeIntersection cr ct
+                      in S.union newCubes reactor
+                 else S.insert ct reactor
 
         contains :: Cube -> Cube -> Bool
         contains a@((xlr,xhr), (ylr,yhr), (zlr,zhr)) b@((xlt,xht), (ylt,yht), (zlt,zht)) =
@@ -57,15 +42,15 @@ main = do
         overlap :: Cube -> Cube -> Bool
         overlap (xsr, ysr, zsr) (xst, yst, zst) = overlap1d xsr xst && overlap1d ysr yst && overlap1d zsr zst
        
-        overlap1d :: (Int, Int) -> (Int, Int) -> Bool
-        overlap1d (al, ah) (bl, bh) =  not (ah <= bl || bh <= al)
+        overlap1d :: (Integer, Integer) -> (Integer, Integer) -> Bool
+        overlap1d (al, ah) (bl, bh) =  not (ah-1 < bl || bh-1 < al)                          
 
-        checkMember :: (Int, Int, Int) -> Cube -> Bool
+        checkMember :: (Integer, Integer, Integer) -> Cube -> Bool
         checkMember (x, y, z) ((xl,xh), (yl,yh), (zl,zh)) =
             x >= xl && x < xh  && y >= yl && y < yh && z >= zl && z < zh
 
-        splitAndAddCubes :: Cube -> Cube -> S.Set Cube
-        splitAndAddCubes cr@((xlr,xhr), (ylr,yhr), (zlr,zhr)) ct@((xlt,xht), (ylt,yht), (zlt,zht)) =
+        removeIntersection :: Cube -> Cube -> S.Set Cube
+        removeIntersection cr@((xlr,xhr), (ylr,yhr), (zlr,zhr)) ct@((xlt,xht), (ylt,yht), (zlt,zht)) =
             let xs = sort $ [xlr, xlt, xhr, xht]
                 ys = sort $ [ylr, ylt, yhr, yht]
                 zs = sort $ [zlr, zlt, zhr, zht]
@@ -73,19 +58,7 @@ main = do
                           | (xl, xh) <- zip xs (tail xs)
                           , (yl, yh) <- zip ys (tail ys)
                           , (zl, zh) <- zip zs (tail zs)
-                          , checkMember (xl, yl, zl) cr || checkMember (xl, yl, zl) ct 
-                          ]
-
-        splitAndRemoveCubes :: Cube -> Cube -> S.Set Cube
-        splitAndRemoveCubes cr@((xlr,xhr), (ylr,yhr), (zlr,zhr)) ct@((xlt,xht), (ylt,yht), (zlt,zht)) =
-            let xs = sort $ [xlr, xlt, xhr, xht]
-                ys = sort $ [ylr, ylt, yhr, yht]
-                zs = sort $ [zlr, zlt, zhr, zht]
-            in S.fromList [((xl,xh), (yl,yh), (zl,zh))
-                          | (xl, xh) <- zip xs (tail xs)
-                          , (yl, yh) <- zip ys (tail ys)
-                          , (zl, zh) <- zip zs (tail zs)
-                          , not (checkMember (xl, yl, zl) cr) && checkMember (xl, yl, zl) ct
+                          , not (checkMember (xl, yl, zl) cr) && checkMember (xl, yl, zl) ct 
                           ]
 
         parsein :: String -> Rule
@@ -103,8 +76,8 @@ main = do
                 (zh, _) = sndDig z'
             in (if state == "on" then On else Off, ((min xl xh, 1 + max xl xh), (min yl yh, 1 + max yl yh), (min zl zh, 1 + max zl zh)))
 
-        countOn :: Reactor -> Int
-        countOn r = {-trace (show r) $-} sum . map (\((xl,xh), (yl,yh), (zl,zh)) -> (xh-xl) * (yh-yl) * (zh-zl)) . S.toList $ r
+        countOn :: Reactor -> Integer
+        countOn r = sum . map (\((xl,xh), (yl,yh), (zl,zh)) -> (xh-xl) * (yh-yl) * (zh-zl)) . S.toList $ r
 
 
         test1 = TestCase (assertEqual "default"            27 (main' "on x=1..3,y=1..3,z=1..3\n"))
@@ -125,3 +98,6 @@ main = do
         test14 = let (_,a) = parsein "on x=1..3,y=1..3,z=1..3\n"
                      (_,b) = parsein "on x=4..6,y=1..3,z=1..3\n"
                 in TestCase (assertEqual "test overlap" False (overlap a b))
+        test15 = TestCase (assertEqual "remove long"     24 (main' "on x=1..3,y=1..3,z=1..3\noff x=-100..100,y=2..2,z=2..2\n"))
+        test16 = TestCase (assertEqual "remove mul long" 20 (main' "on x=1..3,y=1..3,z=1..3\noff x=-100..100,y=2..2,z=2..2\noff x=2..2,y=-100..100,z=2..2\noff x=2..2,y=2..2,z=-100..100\n"))
+        test17 = TestCase (assertEqual "testcase " 590784 (main' "on x=-20..26,y=-36..17,z=-47..7\non x=-20..33,y=-21..23,z=-26..28\non x=-22..28,y=-29..23,z=-38..16\non x=-46..7,y=-6..46,z=-50..-1\non x=-49..1,y=-3..46,z=-24..28\non x=2..47,y=-22..22,z=-23..27\non x=-27..23,y=-28..26,z=-21..29\non x=-39..5,y=-6..47,z=-3..44\non x=-30..21,y=-8..43,z=-13..34\non x=-22..26,y=-27..20,z=-29..19\noff x=-48..-32,y=26..41,z=-47..-37\non x=-12..35,y=6..50,z=-50..-2\noff x=-48..-32,y=-32..-16,z=-15..-5\non x=-18..26,y=-33..15,z=-7..46\noff x=-40..-22,y=-38..-28,z=23..41\non x=-16..35,y=-41..10,z=-47..6\noff x=-32..-23,y=11..30,z=-14..3\non x=-49..-5,y=-3..45,z=-29..18\noff x=18..30,y=-20..-8,z=-3..13\non x=-41..9,y=-7..43,z=-33..15"))

@@ -247,6 +247,6 @@ add y 1
 mul z y
 mul y 0
 add y w
-add y 15
-mul y x
+add y 15 --
+mul y x -- x = n * y = -n * z
 add z y -- z = -y

@@ -10,8 +10,12 @@ type Prog = [Instruction]
 data Registers = Reg Int Int Int Int
 
 main :: IO ()
-main = interact $ show . head . (\prog -> filter (validMN startReg prog) numbers) . map parsein . lines
+main = interact $ show . solve [(0, [])] . chunksOf 18 . map parsein . lines
     where
+
+    solve :: [(Int, [Int])] -> [Prog] -> [Int]
+    solve sls [    ] = map (sum . zipWith (\a b -> b * 10^a) [0..] . reverse) $ map snd $ filter ((==0) . fst) sls
+    solve sls (p:ps) = solve [(z, n:(snd sl)) | n <- [1..9], sl <- sls, let z = validMN (Reg 0 0 0 (fst sl)) p [n]] ps
 
     startReg :: Registers
     startReg = Reg 0 0 0 0
@@ -20,8 +24,8 @@ main = interact $ show . head . (\prog -> filter (validMN startReg prog) numbers
     numbers :: [[Int]]
     numbers = map (map read . chunksOf 1 . show) . filter (not . elem '0' . show) $ [11111111111111..]-- [99999999999999,99999999999998..0]
 
-    validMN :: Registers -> Prog -> [Int] -> Bool
-    validMN (Reg _ _ _ z) [] _ = if z == 0 then True else False
+    validMN :: Registers -> Prog -> [Int] -> Int
+    validMN (Reg _ _ _ z) [] _ = z
     validMN reg ((Inp c):ops) (i:is) = let reg' = ins c i reg
                                        in validMN reg' ops is
     validMN reg ((Add a b):ops) is = let a' = lu reg a
