@@ -6,7 +6,7 @@ import Debug.Trace (trace)
 import qualified Data.Map as M
 
 data Amphipod = E | A | B | C | D deriving (Eq, Ord)
-data Position = H1 | H2 | H3 | H4 | H5 | H6 | H7 | A1 | A2 | B1 | B2 | C1 | C2 | D1 | D2 deriving (Eq, Ord, Show)
+data Position = H1 | H2 | H3 | H4 | H5 | H6 | H7 | A1 | A2 | B1 | B2 | C1 | C2 | D1 | D2 | DU deriving (Eq, Ord, Show)
 data Hallway = Hallway {
     h1 :: Amphipod,
     h2 :: Amphipod,
@@ -22,7 +22,8 @@ data Hallway = Hallway {
     c1 :: Amphipod,
     c2 :: Amphipod,
     d1 :: Amphipod,
-    d2 :: Amphipod
+    d2 :: Amphipod,
+    du :: Amphipod
 } deriving (Eq, Ord)
 -- #############
 -- #12.3.4.5.67#H
@@ -57,10 +58,10 @@ nextSteps s = if isDone (snd s)
               else moveFromHallway s ++ moveFromCave1 s ++ movea2 s ++ moveb2 s ++ movec2 s ++ moved2 s
 
 -- Double (e.g.) H2 H2 to add correct distance when going from A1 -> H2
-a1ToHallway = map ([A1] ++) [[H2, H2, H1], [H2, H2], [H3, H3], [H3, H3, H4, H4], [H3, H3, H4, H4, H5, H5], [H3, H3, H4, H4, H5, H5, H6, H6], [H3, H3, H4, H4, H5, H5, H6, H6, H7]]
-b1ToHallway = map ([B1] ++) [[H3, H3, H2, H2, H1], [H3, H3, H2, H2], [H3, H3], [H4, H4], [H4, H4, H5, H5], [H4, H4, H5, H5, H6, H6], [H4, H4, H5, H5, H6, H6, H7]]
-c1ToHallway = map ([C1] ++) [[H4, H4, H3, H3, H2, H2, H1], [H4, H4, H3, H3, H2, H2], [H4, H4, H3, H3], [H4, H4], [H5, H5], [H5, H5, H6, H6], [H5, H5, H6, H6, H7]]
-d1ToHallway = map ([D1] ++) [[H5, H5, H4, H4, H3, H3, H2, H2, H1], [H5, H5, H4, H4, H3, H3, H2, H2], [H5, H5, H4, H4, H3, H3], [H5, H5, H4, H4], [H5, H5], [H6, H6], [H6, H6, H7]]
+a1ToHallway = map ([A1] ++) [[DU, H2, H1], [DU, H2], [DU, H3], [DU, H3, DU, H4], [DU, H3, DU, H4, DU, H5], [DU, H3, DU, H4, DU, H5, DU, H6], [DU, H3, DU, H4, DU, H5, DU, H6, H7]]
+b1ToHallway = map ([B1] ++) [[DU, H3, DU, H2, H1], [DU, H3, DU, H2], [DU, H3], [DU, H4], [DU, H4, DU, H5], [DU, H4, DU, H5, DU, H6], [DU, H4, DU, H5, DU, H6, H7]]
+c1ToHallway = map ([C1] ++) [[DU, H4, DU, H3, DU, H2, H1], [DU, H4, DU, H3, DU, H2], [DU, H4, DU, H3], [DU, H4], [DU, H5], [DU, H5, DU, H6], [DU, H5, DU, H6, H7]]
+d1ToHallway = map ([D1] ++) [[DU, H5, DU, H4, DU, H3, DU, H2, H1], [DU, H5, DU, H4, DU, H3, DU, H2], [DU, H5, DU, H4, DU, H3], [DU, H5, DU, H4], [DU, H5], [DU, H6], [DU, H6, H7]]
 -- a1ToHallway = map ([A1] ++) [[H2, H1], [H2], [H3], [H3, H4], [H3, H4, H5], [H3, H4, H5, H6], [H3, H4, H5, H6, H7]]
 -- b1ToHallway = map ([B1] ++) [[H3, H2, H1], [H3, H2, H2], [H3], [H4], [H4, H5], [H4, H5, H6], [H4, H5, H6, H7]]
 -- c1ToHallway = map ([C1] ++) [[H4, H3, H2, H1], [H4, H3, H2, H2], [H4, H3], [H4], [H5], [H5, H6], [H5, H6, H7]]
@@ -107,6 +108,7 @@ setTarget C1 a h = h { c1 = a }
 setTarget C2 a h = h { c2 = a }
 setTarget D1 a h = h { d1 = a }
 setTarget D2 a h = h { d2 = a }
+setTarget DU a h = error "No traffic TO or from Dummy"
 
 clearSource :: Position -> Hallway -> Hallway
 clearSource H1 h = h { h1 = E }
@@ -124,6 +126,7 @@ clearSource C1 h = h { c1 = E }
 clearSource C2 h = h { c2 = E }
 clearSource D1 h = h { d1 = E }
 clearSource D2 h = h { d2 = E }
+clearSource DU h = error "No traffic to or FROM Dummy"
 
 pathClear :: State -> [Hallway -> Amphipod] -> Bool
 pathClear s ls = all (\f -> f (snd s) == E) ls
@@ -167,6 +170,7 @@ axs C1 = c1
 axs C2 = c2
 axs D1 = d1
 axs D2 = d2
+axs DU = du
 
 isDone :: Hallway -> Bool
 isDone h = a1 h == A && a2 h == A &&
@@ -197,7 +201,8 @@ startState = Hallway {
     c1 = A,
     c2 = B,
     d1 = C,
-    d2 = B
+    d2 = B,
+    du = E
 }
 
 -- #############
@@ -222,7 +227,8 @@ exampleState = Hallway {
     c1 = B,
     c2 = C,
     d1 = D,
-    d2 = A
+    d2 = A,
+    du = E
 }
 
 -- #############
